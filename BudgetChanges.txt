@@ -1,0 +1,138 @@
+class Program
+    {
+        static void Main(string[] args)
+        {
+
+        }
+        public async static Task CompareClientBudgets(Object BudgetJson, DataSet dataSet, Dictionary<string, bool> dtFinal)
+        {
+            try
+            {
+                string CurrentBudgetId = Convert.ToString(BudgetJson.BudgetId);
+                DateTime CurrentUpdatedDate = Convert.ToDateTime(BudgetJson.UpdatedUTCDate);
+                DataTable dtBudgetInfo = dataSet.Tables["BudgetInfo"];
+                if (dtBudgetInfo != null && dtBudgetInfo.Rows.Count > 0)
+                {
+                    if (!string.IsNullOrWhiteSpace(CurrentBudgetId) && CurrentUpdatedDate != null)
+                    {
+                        if (dtBudgetInfo.AsEnumerable().Any(row => row.BudgetId == CurrentBudgetId && row.UpdatedDate == CurrentUpdatedDate))
+                        {
+                            if (dataSet.Tables[1] != null && dataSet.Tables[1].Rows.Count > 0 && BudgetJson.BudgetLines.Count > 0)
+                            {
+                                var dtBudgetLines = dataSet.Tables[1];
+                                foreach (var CurrentBudgetLine in BudgetJson.BudgetLines.Rows)
+                                {
+                                    if (dtBudgetLines.AsEnumerable().Any(row => row.AccountId == CurrentBudgetLine.AccountId && row.BudgetId == CurrentBudgetLine.BudgetId && row.Period == CurrentBudgetLine.Period && row.Amount == CurrentBudgetLine.Amount && row.UnitAmount == CurrentBudgetLine.UnitAmount))
+                                    {
+                                        if (dataSet.Tables[2] != null && dataSet.Tables[2].Rows.Count > 0 && BudgetJson.BudgetLines.Count > 0)
+                                        {
+                                            var dtBudgetBalance = dataSet.Tables[2];
+                                            foreach (var CurrentBudgetBalance in BudgetJson.BudgetLines.Rows)
+                                            {
+                                                if (dtBudgetBalance.AsEnumerable().Any(row => row.AccountId == CurrentBudgetBalance.AccountId && row.BudgetId == CurrentBudgetBalance.BudgetId && row.AccountCode == CurrentBudgetBalance.AccountCode))
+                                                {
+                                                    if (dataSet.Tables[3] != null && dataSet.Tables[3].Rows.Count > 0 && BudgetJson.BudgetTracking.Count > 0)
+                                                    {
+                                                        var dtBudgetTracking = dataSet.Tables[3];
+                                                        foreach (var CurrentBudgetTracking in BudgetJson.BudgetTracking.Rows)
+                                                        {
+                                                            if (dtBudgetTracking.AsEnumerable().Any(row.BudgetId == CurrentBudgetTracking.BudgetId && row.Name == CurrentBudgetTracking.Name && row.Option == CurrentBudgetTracking.Option))
+                                                            {
+
+                                                            }
+
+                                                        }
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    dtFinal[CurrentBudgetId] = false;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        dtFinal[CurrentBudgetId] = false;
+                                    }
+
+                                }
+
+                            }
+                            else
+                            {
+                                dtFinal[CurrentBudgetId] = false;
+                            }
+                        }
+                        else
+                        {
+                            dtFinal[CurrentBudgetId] = false;
+                        }
+                    }
+                    else
+                    {
+                        dtFinal[CurrentBudgetId] = false;
+                    }
+                }
+                else
+                {
+                    dtFinal[CurrentBudgetId] = false;
+                }
+            }
+            catch
+            {
+                throw;
+            }
+        }
+        public async static Task<DataSet> GetClientBudgetInfo(string BudgetName)
+        {
+            try
+            {
+                DataSet ds = new DataSet();
+
+                using SqlConnection conn = new SqlConnection("YourConnectionStringHere");
+                {
+                    await conn.OpenAsync(); // Open the connection asynchronously
+
+                    using SqlCommand cmd = new SqlCommand("CompareXeroClientBudgets", conn);
+                    {
+                        // If it's a stored procedure, set the command type
+                        cmd.CommandType = CommandType.StoredProcedure;
+
+                        // Assuming you're passing BudgetName as a parameter
+                        cmd.Parameters.AddWithValue("@BudgetName", BudgetName);
+
+                        // Fill the dataset synchronously since SqlDataAdapter doesn't have async fill
+                        SqlDataAdapter dataAdapter = new SqlDataAdapter(cmd);
+                        dataAdapter.Fill(ds);
+                    }
+                }
+
+                // Rename tables if they exist
+                if (ds.Tables != null && ds.Tables.Count > 0)
+                {
+                    ds.Tables[0].TableName = "BudgetInfo";
+                }
+                if (ds.Tables.Count > 1)
+                {
+                    ds.Tables[1].TableName = "BudgetLines";
+                }
+                if (ds.Tables.Count > 2)
+                {
+                    ds.Tables[2].TableName = "BudgetBalances";
+                }
+                if (ds.Tables.Count > 3)
+                {
+                    ds.Tables[3].TableName = "BudgetTracking";
+                }
+
+                return ds;
+            }
+            catch (Exception ex)
+            {
+                // Log or handle the exception as needed
+                throw new Exception("An error occurred while fetching the budget info", ex);
+            }
+        }
+
+    }
