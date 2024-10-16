@@ -1,0 +1,46 @@
+using System;
+using System.IO;
+using System.Threading;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        // Path to the file that the web app writes to
+        string triggerFilePath = @"/home/thirumurugan/FileTrigger.txt";
+
+        Console.WriteLine("Monitoring trigger file...");
+
+        // Infinite loop to continuously monitor the file
+        while (true)
+        {
+            // Check if the trigger file exists
+            if (File.Exists(triggerFilePath))
+            {
+                // Read the contents of the file
+                string command = File.ReadAllText(triggerFilePath);
+                Console.WriteLine($"The typed command is " + command);
+
+                // If the file contains the command to run the method
+                if (!string.IsNullOrEmpty(command))
+                {
+                    // Trigger the method
+                    TriggerMethod();
+
+                    // Clear the file after reading it to prevent re-triggering
+                    File.WriteAllText(triggerFilePath, string.Empty);
+                }
+            }
+
+            // Sleep for a short interval before checking again
+            Thread.Sleep(5000); // Check every 5 seconds
+        }
+    }
+
+    // The method to be triggered
+    static void TriggerMethod()
+    {
+        Console.WriteLine("Method triggered by file!");
+        // Implement the logic for the method here
+    }
+}
